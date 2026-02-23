@@ -2,169 +2,174 @@
 
 import pytest
 from unittest.mock import MagicMock, patch
-
 from llm_mindmap.llm.openrouter import OpenRouterProvider
 
 
 class TestOpenRouterProvider:
-    """Test OpenRouter provider implementation."""
+    """Test OpenRouterProvider class."""
 
     @pytest.fixture
     def provider(self):
-        """Create an OpenRouter provider for testing."""
+        """Create OpenRouter provider with test config."""
         return OpenRouterProvider(
             model="anthropic/claude-3.5-sonnet",
             api_key="test-key",
-            base_url="https://openrouter.ai/api/v1",
+            base_url="https://test.api/v1",
         )
 
     def test_initialization(self, provider):
         """Test provider initialization."""
         assert provider.model == "anthropic/claude-3.5-sonnet"
-        assert provider.connection_config == {
-            "api_key": "test-key",
-            "base_url": "https://openrouter.ai/api/v1",
-        }
+        assert provider.api_key == "test-key"
+        assert provider.base_url == "https://test.api/v1"
 
-    def test_initialization_without_client(self, provider):
-        """Test client is configured during initialization."""
-        assert provider._client is not None
+    def test_initialization_with_connection_config(self):
+        """Test initialization with connection config dict."""
+        provider = OpenRouterProvider(
+            model="gpt-4o-mini",
+            **{
+                "api_key": "test-key",
+                "base_url": "https://custom.api/v1",
+                "timeout": 30,
+            }
+        )
 
-    def test_missing_llm_clients_python_raises_error(self):
-        """Test missing llm-clients-python raises ImportError."""
-        with patch("llm_mindmap.llm.openrouter.OpenRouterClient", side_effect=ImportError):
-            with pytest.raises(ImportError) as exc_info:
-                OpenRouterProvider(
-                    model="test-model",
-                    api_key="test-key",
-                )
+        assert provider.model == "gpt-4o-mini"
+        assert provider.api_key == "test-key"
+        assert provider.base_url == "https://custom.api/v1"
+        assert provider.timeout == 30
 
-            assert "llm-clients-python" in str(exc_info.value)
-
-    def test_get_response(self, provider):
+    @patch("llm_mindmap.llm.openrouter.httpx.Client")
+    def test_get_response(self, mock_client_class, provider):
         """Test get_response method."""
         mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Test response"
+        mock_response.json.return_value = {
+            "choices": [{"message": {"content": "Test response"}}]
+        }
+        mock_response.raise_for_status = MagicMock()
+        
+        mock_client = MagicMock()
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value = mock_client
 
-        with patch.object(provider._client, "chat") as mock_chat:
-            mock_chat.completions.create.return_value = mock_response
+        result = provider.get_response(
+            [{"role": "user", "content": "Hello"}],
+            temperature=0.5,
+        )
 
-            result = provider.get_response(
-                chat_history=[{"role": "user", "content": "Hello"}],
-                temperature=0.5,
-            )
+        assert result == "Test response"
+        mock_client.post.assert_called_once()
+        call_args = mock_client.post.call_args
+        assert "messages" in call_args[1]["json"]
+        assert call_args[1]["json"]["temperature"] == 0.5
 
-            assert result == "Test response"
-            mock_chat.completions.create.assert_called_once()
-
-    def test_get_response_empty_content(self, provider):
-        """Test get_response with empty content."""
+    @patch("llm_mindmap.llm.openrouter.httpx.Client")
+    def test_get_response_invalid_api_response(self, mock_client_class, provider):
+        """Test get_response with invalid API response."""
         mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = None
+        mock_response.json.return_value = {"invalid": "response"}
+        mock_response.raise_for_status = MagicMock()
+        
+        mock_client = MagicMock()
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value = mock_client
 
-        with patch.object(provider._client, "chat") as mock_chat:
-            mock_chat.completions.create.return_value = mock_response
+        with pytest.raises(ValueError) as exc_info:
+            provider.get_response([{"role": "user", "content": "Hello"}])
 
-            result = provider.get_response(
-                chat_history=[{"role": "user", "content": "Hello"}],
-            )
+        assert "Invalid API response" in str(exc_info.value)
 
-            assert result == ""
-
-    def test_get_response_invalid_response(self, provider):
-        """Test get_response with invalid response."""
-        mock_response = MagicMock()
-        mock_response.choices = []
-
-        with patch.object(provider._client, "chat") as mock_chat:
-            mock_chat.completions.create.return_value = mock_response
-
-            with pytest.raises(ValueError) as exc_info:
-                provider.get_response(
-                    chat_history=[{"role": "user", "content": "Hello"}],
-                )
-
-            assert "Invalid response" in str(exc_info.value)
-
-    def test_get_response_without_client(self):
-        """Test get_response without initialized client."""
-        provider = OpenRouterProvider.__new__(OpenRouterProvider)
-        provider.model = "test-model"
-        provider.connection_config = {}
-        provider._client = None
-
-        with pytest.raises(RuntimeError) as exc_info:
-            provider.get_response(
-                chat_history=[{"role": "user", "content": "Hello"}],
-            )
-
-        assert "not initialized" in str(exc_info.value)
-
-    def test_get_tools_response_with_tool_calls(self, provider):
-        """Test get_tools_response with tool calls."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-
-        mock_tool_call = MagicMock()
-        mock_tool_call.function.name = "test_function"
-        mock_tool_call.function.arguments = '{"arg1": "value1"}'
-
-        mock_response.choices[0].message.tool_calls = [mock_tool_call]
-        mock_response.choices[0].message.content = None
-
-        with patch.object(provider._client, "chat") as mock_chat:
-            mock_chat.completions.create.return_value = mock_response
-
-            result = provider.get_tools_response(
-                chat_history=[{"role": "user", "content": "Hello"}],
-                tools=[{"name": "test_function", "description": "Test"}],
-            )
-
-            assert result["tool_calls"] is not None
-            assert len(result["func_names"]) == 1
-            assert result["func_names"][0] == "test_function"
-            assert len(result["arguments"]) == 1
-            assert result["arguments"][0] == {"arg1": "value1"}
-            assert result["text"] is None
-
-    def test_get_tools_response_without_tool_calls(self, provider):
+    @patch("llm_mindmap.llm.openrouter.httpx.Client")
+    def test_get_tools_response_without_tools(self, mock_client_class, provider):
         """Test get_tools_response without tool calls."""
         mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.tool_calls = None
-        mock_response.choices[0].message.content = "Text response"
+        mock_response.json.return_value = {
+            "choices": [{"message": {"content": "Response text"}}]
+        }
+        mock_response.raise_for_status = MagicMock()
+        
+        mock_client = MagicMock()
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value = mock_client
 
-        with patch.object(provider._client, "chat") as mock_chat:
-            mock_chat.completions.create.return_value = mock_response
+        result = provider.get_tools_response(
+            [{"role": "user", "content": "Hello"}],
+            tools=[{"type": "function", "function": {"name": "test"}}],
+        )
 
-            result = provider.get_tools_response(
-                chat_history=[{"role": "user", "content": "Hello"}],
-                tools=[{"name": "test_function", "description": "Test"}],
-            )
+        assert result["text"] == "Response text"
+        assert result["func_names"] == []
+        assert result["arguments"] == []
 
-            assert result["tool_calls"] is None
-            assert result["func_names"] == []
-            assert result["arguments"] == []
-            assert result["text"] == "Text response"
+    @patch("llm_mindmap.llm.openrouter.httpx.Client")
+    def test_get_tools_response_with_tools(self, mock_client_class, provider):
+        """Test get_tools_response with tool calls."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "choices": [{
+                "message": {
+                    "content": "Response text",
+                    "tool_calls": [{
+                        "id": "call_123",
+                        "type": "function",
+                        "function": {
+                            "name": "test_function",
+                            "arguments": '{"param": "value"}'
+                        }
+                    }]
+                }
+            }]
+        }
+        mock_response.raise_for_status = MagicMock()
+        
+        mock_client = MagicMock()
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value = mock_client
 
-    def test_get_stream_response(self, provider):
+        result = provider.get_tools_response(
+            [{"role": "user", "content": "Hello"}],
+            tools=[{"type": "function", "function": {"name": "test"}}],
+        )
+
+        assert result["text"] == "Response text"
+        assert result["func_names"] == ["test_function"]
+        assert result["arguments"] == [{"param": "value"}]
+        assert len(result["tool_calls"]) == 1
+
+    @patch("llm_mindmap.llm.openrouter.httpx.Client")
+    def test_get_stream_response(self, mock_client_class, provider):
         """Test get_stream_response method."""
-        chunks = ["Hello", " ", "world", "!"]
+        mock_stream_response = MagicMock()
+        mock_stream_response.iter_lines.return_value = [
+            b'{"choices":[{"delta":{"content":"Hello"}}]}',
+            b'{"choices":[{"delta":{"content":" world"}}]}',
+        ]
+        mock_stream_response.raise_for_status = MagicMock()
+        
+        mock_response = MagicMock()
+        mock_response.__enter__ = MagicMock(return_value=mock_stream_response)
+        mock_response.__exit__ = MagicMock(return_value=False)
+        
+        mock_client = MagicMock()
+        mock_client.stream.return_value = mock_response
+        mock_client_class.return_value = mock_client
 
-        mock_stream = MagicMock()
-        for i, chunk_text in enumerate(chunks):
-            mock_chunk = MagicMock()
-            mock_chunk.choices = [MagicMock()]
-            mock_chunk.choices[0].delta.content = chunk_text
-            mock_stream.__iter__.return_value = [mock_chunk]
+        chunks = list(provider.get_stream_response([{"role": "user", "content": "Hello"}]))
 
-        with patch.object(provider._client, "chat") as mock_chat:
-            mock_chat.completions.create.return_value = mock_stream
+        assert chunks == ["Hello", " world"]
 
-            result = list(provider.get_stream_response(
-                chat_history=[{"role": "user", "content": "Hello"}],
-            ))
+    @patch("llm_mindmap.llm.openrouter.httpx.Client")
+    def test_http_error_handling(self, mock_client_class, provider):
+        """Test HTTP error handling."""
+        import httpx
+        
+        mock_client = MagicMock()
+        mock_client.post.side_effect = httpx.HTTPStatusError(
+            "Error",
+            request=MagicMock(),
+            response=MagicMock(status_code=500)
+        )
+        mock_client_class.return_value = mock_client
 
-            assert result == chunks
+        with pytest.raises(httpx.HTTPStatusError):
+            provider.get_response([{"role": "user", "content": "Hello"}])
