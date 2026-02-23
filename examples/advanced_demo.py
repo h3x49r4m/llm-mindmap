@@ -1,4 +1,4 @@
-Advanced usage example for llm-mindmap.
+"""Advanced usage example for llm-mindmap.
 
 This example demonstrates:
 - Using MindMapGenerator for advanced generation modes
@@ -21,13 +21,18 @@ def example_one_shot_generation():
     print("=" * 60)
 
     # Configure LLM
-    config = {
-        "provider": "openrouter",
-        "model": "gpt-4o-mini",
-        "connection_config": {
-            "api_key": os.getenv("OPENROUTER_API_KEY"),
-        },
-    }
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if api_key:
+        config = {
+            "provider": "openrouter",
+            "model": "gpt-4o-mini",
+            "connection_config": {
+                "api_key": api_key,
+            },
+        }
+    else:
+        # Use iFlow from .local/llms.json
+        config = None  # Will use default from .local/llms.json
 
     # Initialize generator
     generator = MindMapGenerator(
@@ -66,8 +71,14 @@ def example_refined_generation():
     print("=" * 60)
 
     # Configure LLM with separate reasoning model
-    base_config = "openrouter::gpt-4o-mini"
-    reasoning_config = "openrouter::gpt-4o"
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if api_key:
+        base_config = "openrouter::gpt-4o-mini"
+        reasoning_config = "openrouter::gpt-4o"
+    else:
+        # Use iFlow from .local/llms.json
+        base_config = None
+        reasoning_config = None
 
     # Initialize generator
     generator = MindMapGenerator(
@@ -132,7 +143,12 @@ def example_custom_instructions():
     print("=" * 60)
 
     # Configure LLM
-    config = "openrouter::gpt-4o-mini"
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if api_key:
+        config = "openrouter::gpt-4o-mini"
+    else:
+        # Use iFlow from .local/llms.json
+        config = None
 
     # Initialize generator
     generator = MindMapGenerator(
@@ -174,7 +190,12 @@ def example_data_extraction():
     print("=" * 60)
 
     # Generate a simple mind map
-    config = "openrouter::gpt-4o-mini"
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if api_key:
+        config = "openrouter::gpt-4o-mini"
+    else:
+        # Use iFlow from .local/llms.json
+        config = None
 
     mindmap = generate_theme_tree(
         main_theme="Digital Marketing",
@@ -231,7 +252,7 @@ def main():
         print("Warning: OPENROUTER_API_KEY not set.")
         print("Set it with: export OPENROUTER_API_KEY=your-key")
         print()
-        print("Using mock responses for demonstration...")
+        print("Using iFlow from .local/llms.json configuration...")
         print()
 
     # Run examples

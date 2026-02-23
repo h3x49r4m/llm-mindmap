@@ -60,16 +60,30 @@ class MindMapGenerator:
             **self.llm_model_config_reasoning.connection_config,
         )
 
-    def _parse_config(self, config: LLMConfig | dict | str) -> LLMConfig:
+    def _parse_config(self, config: LLMConfig | dict | str | None) -> LLMConfig:
         """Parse configuration to LLMConfig.
 
         Args:
-            config: Configuration in LLMConfig, dict, or string format
+            config: Configuration in LLMConfig, dict, string format, or None
 
         Returns:
             Parsed LLMConfig object
         """
-        if isinstance(config, LLMConfig):
+        if config is None:
+            # Use default configuration from .local/llms.json
+            from llm_mindmap.llm.base import load_llm_config
+            
+            llm_config = load_llm_config()
+            default_provider = llm_config.get("default_provider", "iflow")
+            provider_config = llm_config.get("providers", {}).get(default_provider, {})
+            default_model = llm_config.get("default_model", "gpt-4o")
+            
+            return LLMConfig(
+                provider=default_provider,
+                model=default_model,
+                connection_config=provider_config,
+            )
+        elif isinstance(config, LLMConfig):
             return config
         elif isinstance(config, dict):
             return LLMConfig(**config)
@@ -132,11 +146,17 @@ class MindMapGenerator:
                     f"Illegal key(s) {illegal_keys} at {path}. Node: {node}"
                 )
 
-            for key in allowed_keys:
+            # Check required fields (children is optional for leaf nodes)
+            required_keys = {"label", "node", "summary"}
+            for key in required_keys:
                 if key not in node or node[key] is None:
                     raise ValueError(
                         f"Missing or null required field '{key}' at {path}. Node: {node}"
                     )
+
+            # Default children to empty list if not present
+            if "children" not in node:
+                node["children"] = []
 
             if not isinstance(node["children"], list):
                 raise ValueError(
