@@ -66,7 +66,24 @@ class MindMap:
         Returns:
             String representation of the tree
         """
-        s = prefix + self.label + "\n"
+        return self._as_string_recursive(prefix, is_first_line=True)
+
+    def _as_string_recursive(self, prefix: str, is_first_line: bool) -> str:
+        """Recursive helper for as_string.
+
+        Args:
+            prefix: Prefix to add to each branch
+            is_first_line: Whether this is the first line of this node
+
+        Returns:
+            String representation of the tree
+        """
+        # For the first line of a node, just add the label
+        # For subsequent lines (children), add the prefix and then the content
+        if is_first_line:
+            s = self.label + "\n"
+        else:
+            s = prefix + self.label + "\n"
 
         if not self.children:
             return s
@@ -80,8 +97,31 @@ class MindMap:
                 branch = "├── "
                 child_prefix = prefix + "│   "
 
-            s += prefix + branch
-            s += child.as_string(prefix=child_prefix)
+            # Add the branch (replaces prefix for first line of child)
+            # The child's first line will not add prefix, so we add branch + child's first line content
+            s += prefix + branch + child.label + "\n"
+            # Add the child's children (they will add their own prefix)
+            if child.children:
+                for grandchild in child.children:
+                    is_last_gc = grandchild == child.children[-1]
+                    if is_last_gc:
+                        gc_branch = "└── "
+                        gc_prefix = child_prefix + "    "
+                    else:
+                        gc_branch = "├── "
+                        gc_prefix = child_prefix + "│   "
+                    s += child_prefix + gc_branch + grandchild.label + "\n"
+                    # Add grandchildren's children if any
+                    if grandchild.children:
+                        for ggchild in grandchild.children:
+                            is_last_ggc = ggchild == grandchild.children[-1]
+                            if is_last_ggc:
+                                ggc_branch = "└── "
+                                ggc_prefix = gc_prefix + "    "
+                            else:
+                                ggc_branch = "├── "
+                                ggc_prefix = gc_prefix + "│   "
+                            s += gc_prefix + ggc_branch + ggchild.label + "\n"
         return s
 
     def get_label_summaries(self) -> dict[str, str]:
