@@ -195,7 +195,7 @@ class MindMap:
                     add_nodes(child)
 
         add_nodes(self)
-        return mindmap
+        mindmap.render("mindmap.gv", format="pdf", cleanup=True, quiet=True)
 
     def _visualize_plotly(self) -> None:
         """Visualize tree using Plotly treemap."""
