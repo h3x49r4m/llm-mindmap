@@ -16,10 +16,13 @@ def main():
     """Run basic mind map generation example."""
     
     # Configure LLM
-    # Option 1: Use string format (provider::model)
-    llm_config = "openrouter::gpt-4o-mini"
+    # Option 1: Use default model (reads from .local/llms.json)
+    llm_config = None
 
-    # Option 2: Use dict format with custom base URL
+    # Option 2: Use string format (provider::model)
+    # llm_config = "openrouter::gpt-4o-mini"
+
+    # Option 3: Use dict format with custom base URL
     # llm_config = {
     #     "provider": "openrouter",
     #     "model": "gpt-4o-mini",
@@ -29,7 +32,7 @@ def main():
     #     }
     # }
 
-    # Option 3: Use iFlow provider
+    # Option 4: Use iFlow provider explicitly
     # llm_config = "iflow::gpt-4o-mini"
 
     # Generate mind map

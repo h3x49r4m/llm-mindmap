@@ -377,6 +377,21 @@ def generate_theme_tree(
                 provider="openrouter",
                 model=llm_model_config,
             )
+    elif llm_model_config is None:
+        # Load default configuration from .local/llms.json
+        from llm_mindmap.llm.base import load_llm_config
+
+        llm_config = load_llm_config()
+        default_provider = llm_config.get("default_provider", "iflow")
+        provider_config = llm_config.get("providers", {}).get(default_provider, {})
+
+        default_model = llm_config.get("default_model", "gpt-4o")
+
+        llm_model_config = LLMConfig(
+            provider=default_provider,
+            model=default_model,
+            connection_config=provider_config,
+        )
 
     logger.debug(f"LLM Model Config: {llm_model_config}")
 

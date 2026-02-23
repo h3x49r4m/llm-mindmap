@@ -2,14 +2,35 @@
 
 from __future__ import annotations
 
+import json
 import os
 from abc import ABC, abstractmethod
 from logging import Logger, getLogger
+from pathlib import Path
 from typing import Any, Generator
 
 from pydantic import BaseModel, Field, field_validator
 
 logger: Logger = getLogger(__name__)
+
+
+def load_llm_config(config_path: str | Path = ".local/llms.json") -> dict[str, Any]:
+    """Load LLM configuration from JSON file.
+
+    Args:
+        config_path: Path to the configuration file
+
+    Returns:
+        Dictionary containing LLM configuration
+    """
+    path = Path(config_path)
+    if path.exists():
+        try:
+            with open(path) as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError) as e:
+            logger.warning(f"Failed to load LLM config from {config_path}: {e}")
+    return {}
 
 
 class LLMConfig(BaseModel):
@@ -148,7 +169,9 @@ class LLMEngine:
             **connection_config: Connection configuration (API keys, base URLs, etc.)
         """
         if model is None:
-            model = os.getenv("LLM_MINDMAP_DEFAULT_MODEL", "openrouter::anthropic/claude-3.5-sonnet")
+            llm_config = load_llm_config()
+            default_provider = llm_config.get("default_provider", "iflow")
+            model = os.getenv("LLM_MINDMAP_DEFAULT_MODEL", f"{default_provider}::gpt-4o-mini")
 
         self.provider_name, self.model_name = self._parse_model(model)
         self.provider = self._load_provider(**connection_config)
@@ -168,7 +191,9 @@ class LLMEngine:
         if "::" in model:
             provider, model_name = model.split("::", 1)
         else:
-            provider = "openrouter"
+            # Use default provider from config
+            llm_config = load_llm_config()
+            provider = llm_config.get("default_provider", "iflow")
             model_name = model
 
         config = LLMConfig(provider=provider, model=model_name)
@@ -186,16 +211,22 @@ class LLMEngine:
         Raises:
             ValueError: If provider is not supported
         """
+        llm_config = load_llm_config()
+        provider_config = llm_config.get("providers", {}).get(self.provider_name, {})
+
+        # Merge connection_config with provider config from file
+        merged_config = {**provider_config, **connection_config}
+
         if self.provider_name == "openrouter":
             from llm_mindmap.llm.openrouter import OpenRouterProvider
 
             return OpenRouterProvider(
-                model=self.model_name, **connection_config
+                model=self.model_name, **merged_config
             )
         elif self.provider_name == "iflow":
             from llm_mindmap.llm.iflow import IFlowProvider
 
-            return IFlowProvider(model=self.model_name, **connection_config)
+            return IFlowProvider(model=self.model_name, **merged_config)
         else:
             raise ValueError(f"Unsupported provider: {self.provider_name}")
 
