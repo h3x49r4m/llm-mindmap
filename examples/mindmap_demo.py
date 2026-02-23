@@ -1,4 +1,4 @@
-Basic usage example for llm-mindmap.
+"""Basic usage example for llm-mindmap.
 
 This example demonstrates how to:
 - Generate a mind map from a topic using generate_theme_tree()
@@ -14,7 +14,7 @@ from llm_mindmap.mindmap import generate_theme_tree
 
 def main():
     """Run basic mind map generation example."""
-
+    
     # Configure LLM
     # Option 1: Use string format (provider::model)
     llm_config = "openrouter::gpt-4o-mini"

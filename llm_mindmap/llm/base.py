@@ -49,9 +49,27 @@ class LLMConfig(BaseModel):
             )
         return provider
 
-    def get_llm_kwargs(self) -> dict[str, Any]:
-        """Get LLM kwargs excluding model, provider, and connection_config."""
-        config_dict = self.model_dump(exclude={"model", "provider", "connection_config"})
+    def get_llm_kwargs(
+        self,
+        remove_max_tokens: bool = False,
+        remove_timeout: bool = False,
+    ) -> dict[str, Any]:
+        """Get LLM kwargs excluding model, provider, and connection_config.
+
+        Args:
+            remove_max_tokens: If True, exclude max_tokens from the result
+            remove_timeout: If True, exclude timeout from the result
+
+        Returns:
+            Dictionary of LLM kwargs
+        """
+        exclude = {"model", "provider", "connection_config"}
+        if remove_max_tokens:
+            exclude.add("max_tokens")
+        if remove_timeout:
+            exclude.add("timeout")
+
+        config_dict = self.model_dump(exclude=exclude)
         return {k: v for k, v in config_dict.items() if v is not None}
 
 
