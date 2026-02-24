@@ -150,6 +150,14 @@ Convention Compliance:
   ✓ Type hints included
   ✓ Docstrings follow project style
 
+Code Conciseness:
+  ✓ Uses list comprehensions over loops
+  ✓ Leverages built-in functions
+  ✓ No redundant code
+  ✓ Minimal intermediate variables
+  ✓ Simple, readable solutions
+  ✓ Avoids over-engineering
+
 Code Quality:
   ✓ No duplicate code detected
   ✓ No magic literals
@@ -294,6 +302,104 @@ READY TO COMMIT
 - Raises documented
 - Examples included where appropriate
 
+### Code Conciseness Enforcement
+
+**Clean Code Principles:**
+- **DRY** (Don't Repeat Yourself): No duplicate code
+- **KISS** (Keep It Simple, Stupid): Prefer simple solutions
+- **YAGNI** (You Aren't Gonna Need It): Avoid over-engineering
+- **Single Responsibility**: One function = one purpose
+- **Early Returns**: Reduce nesting depth with guard clauses
+- **Expressive Code**: Code should be self-documenting
+
+**Conciseness Rules:**
+- Prefer list comprehensions over for loops when appropriate
+- Use built-in functions (map, filter, reduce, any, all) instead of manual implementations
+- Avoid redundant code and unnecessary intermediate variables
+- Prefer one-liners for simple operations without sacrificing readability
+- Use ternary operators for simple conditional assignments
+- Leverage Python idioms and patterns
+
+**Enforcement Examples:**
+
+```
+❌ Verbose - Can be simplified
+result = []
+for item in items:
+    if item > 0:
+        result.append(item)
+
+✓ Concise - List comprehension
+result = [item for item in items if item > 0]
+```
+
+```
+❌ Verbose - Unnecessary intermediate variable
+total = 0
+for number in numbers:
+    total = total + number
+return total
+
+✓ Concise - Built-in function
+return sum(numbers)
+```
+
+```
+❌ Verbose - Manual filtering
+filtered = []
+for item in items:
+    if condition(item):
+        filtered.append(item)
+
+✓ Concise - Built-in filter
+filtered = list(filter(condition, items))
+```
+
+```
+❌ Verbose - Nested conditions
+if x > 0:
+    if y > 0:
+        return True
+    else:
+        return False
+else:
+    return False
+
+✓ Concise - Single expression
+return x > 0 and y > 0
+```
+
+```
+❌ Over-engineered - Unnecessary complexity
+def calculate_average(numbers):
+    if not numbers:
+        return None
+    else:
+        total = sum(numbers)
+        count = len(numbers)
+        average = total / count
+        return average
+
+✓ Clean - Simple and direct
+def calculate_average(numbers):
+    return sum(numbers) / len(numbers) if numbers else None
+```
+
+**Anti-Patterns Detection:**
+- Excessive intermediate variables (>3 per function)
+- Verbose loops that could use comprehensions
+- Manual implementations of built-in functionality
+- Over-engineered solutions for simple problems
+- Redundant conditional checks
+- Unnecessary function wrapping
+
+**Simplification Suggestions:**
+- Replace loops with comprehensions where appropriate
+- Use built-in functions instead of manual implementations
+- Reduce intermediate variables
+- Apply guard clauses to reduce nesting
+- Choose the most readable concise option
+
 ### Code Quality Enforcement
 
 **Duplicate Code Detection:**
@@ -379,6 +485,26 @@ READY TO COMMIT
         "style": "google",
         "requiredForPublic": true
       }
+    }
+  }
+}
+```
+
+### Conciseness Configuration
+
+```json
+{
+  "devEnforce": {
+    "conciseness": {
+      "enabled": true,
+      "preferComprehensions": true,
+      "preferBuiltins": true,
+      "maxIntermediateVariables": 3,
+      "suggestOneLiners": true,
+      "avoidOverEngineering": true,
+      "enforceEarlyReturns": true,
+      "preferTernaryOperators": true,
+      "detectVerbosePatterns": true
     }
   }
 }
@@ -506,6 +632,34 @@ The skill uses refactor skill capabilities for:
 2. **Check coverage** - Verify coverage meets thresholds
 3. **Review changes** - Look at all modified files
 4. **Commit with git-manage** - Use conventional commit format
+
+### Writing Short and Clean Code
+
+**Conciseness Principles:**
+1. **Prefer comprehensions** - Use list/dict/set comprehensions over loops
+2. **Leverage built-ins** - Use sum(), max(), min(), any(), all() instead of manual implementation
+3. **Reduce nesting** - Use guard clauses and early returns
+4. **Eliminate redundancy** - Remove duplicate code and unnecessary variables
+5. **Simplify conditionals** - Use ternary operators for simple cases
+6. **Be expressive** - Write self-documenting code that reads like English
+
+**Anti-Patterns to Avoid:**
+- Unnecessary intermediate variables (keep ≤3 per function)
+- Verbose loops when comprehensions are clearer
+- Manual implementations of built-in functions
+- Over-engineered solutions for simple problems
+- Deep nesting (use early returns to flatten)
+- Redundant checks and conditions
+
+**Clean Code Checklist:**
+- ✓ Function does one thing well
+- ✓ Name describes what it does
+- ✓ No more than 50 lines
+- ✓ No more than 5 parameters
+- ✓ No more than 4 levels of nesting
+- ✓ Uses built-in functions when possible
+- ✓ Avoids code duplication
+- ✓ Reads naturally from top to bottom
 
 ## Examples
 
