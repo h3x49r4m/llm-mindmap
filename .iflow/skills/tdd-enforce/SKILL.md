@@ -78,6 +78,18 @@ Pipeline checks for automated enforcement:
 - TDD cycle steps validated in commit history
 - Architecture compliance verified
 
+### 7. Coding Principles Compliance
+Enforces coding quality principles from refactoring best practices:
+- **Magic Literals Extraction**: Detects hardcoded numbers/strings, requires named constants
+- **Long Functions Decomposition**: Validates function length, complexity, and parameter count
+- **Poor Naming Improvements**: Ensures descriptive, self-documenting variable/function names
+- **Dead Code Elimination**: Detects unused imports, variables, functions, and classes
+- **Complex Conditionals Reduction**: Simplifies nested if/else statements and boolean expressions
+- **Code Smells Detection**: Identifies god functions, feature envy, data clumps, primitive obsession
+- **Duplicate Code Detection**: Finds identical or similar code blocks across the project
+
+These principles are enforced during the green and refactor phases of the TDD cycle to ensure code quality from the start.
+
 ## Output Format
 
 ```
@@ -113,6 +125,16 @@ IMPLEMENTATION RESTRICTION
 ✓ All implementations have tests (PASS)
 ✓ All functions are tested (PASS)
 ✗ Behavior changes have test updates (FAIL) - Modified goal_engine without test update
+
+CODING PRINCIPLES
+-----------------
+✓ Magic Literals (PASS) - No hardcoded numbers/strings detected
+✗ Long Functions (FAIL) - process_data exceeds 50 lines (67 lines)
+✓ Poor Naming (PASS) - All names are descriptive
+✗ Dead Code (FAIL) - Found 2 unused imports in utils.py
+✓ Complex Conditionals (PASS) - No deeply nested conditionals
+✗ Code Smells (FAIL) - God function detected in orchestrator.py
+✓ Duplicate Code (PASS) - No duplicate code blocks found
 
 RECURSION AND INFINITE LOOPS
 -----------------------------
@@ -249,6 +271,122 @@ VIOLATION: Test not updated to reflect new behavior
 ACTION: Update test, then modify implementation
 ```
 
+### Magic Literals Detection
+**Pattern Matching:**
+- Hardcoded numbers (excluding 0, 1, -1)
+- Hardcoded strings (excluding empty string)
+- Repeated literals (occurs 2+ times)
+
+**Enforcement:**
+```
+Attempting to commit: src/processor.py
+VIOLATION: Magic literal detected
+  Literal: 3.14159 at line 15
+  Suggested: Define constant PI = 3.14159
+ACTION: Extract to named constant
+```
+
+### Long Functions Detection
+**Thresholds (configurable):**
+- `max_lines`: 50 (default)
+- `max_complexity`: 10 (default)
+- `max_parameters`: 5 (default)
+- `max_nesting_depth`: 4 (default)
+
+**Enforcement:**
+```
+Attempting to commit: src/processor.py
+VIOLATION: Function exceeds length threshold
+  Function: process_complex_data (67 lines, limit: 50)
+  Complexity: 12 (limit: 10)
+  Parameters: 6 (limit: 5)
+  Nesting depth: 5 (limit: 4)
+ACTION: Decompose into smaller functions with single responsibility
+```
+
+### Poor Naming Detection
+**Validation Rules:**
+- Minimum name length: 3 characters
+- Forbidden names: temp, data, info, obj, var, item
+- Enforce camelCase for functions/variables (configurable)
+- Enforce PascalCase for classes (configurable)
+- Descriptive, self-documenting names required
+
+**Enforcement:**
+```
+Attempting to commit: src/processor.py
+VIOLATION: Poor naming detected
+  Variable: 'temp' at line 23 (too generic)
+  Function: 'calc' at line 45 (too abbreviated)
+ACTION: Use descriptive names: 'temp_data', 'calculate_metric'
+```
+
+### Dead Code Detection
+**Analysis:**
+- Unused imports across all files
+- Unused variables and parameters
+- Unused functions, classes, and methods
+- Unreachable code blocks
+
+**Enforcement:**
+```
+Attempting to commit: src/processor.py
+VIOLATION: Dead code detected
+  Unused import: 'json' (line 5)
+  Unused variable: 'counter' (line 32)
+  Unused function: 'legacy_handler' (line 78)
+ACTION: Remove unused code to improve maintainability
+```
+
+### Complex Conditionals Detection
+**Pattern Matching:**
+- Nested if/else statements (>3 levels)
+- Complex boolean expressions (>3 conditions)
+- Multiple consecutive if statements (can use switch/case)
+
+**Enforcement:**
+```
+Attempting to commit: src/processor.py
+VIOLATION: Complex conditional detected
+  Nested if/else depth: 5 (limit: 3)
+  Location: process_validation (line 45-67)
+ACTION: Use guard clauses, early returns, or switch/case
+```
+
+### Code Smells Detection
+**Anti-patterns:**
+- **God Functions**: Functions with too many responsibilities (>200 lines, >15 complexity)
+- **Feature Envy**: Functions that use another object's data more than their own
+- **Data Clumps**: Variables that appear together frequently (extract to object)
+- **Primitive Obsession**: Using primitives instead of domain objects
+
+**Enforcement:**
+```
+Attempting to commit: src/orchestrator.py
+VIOLATION: Code smell detected
+  Type: God Function
+  Function: handle_all_operations (250 lines, complexity: 20)
+ACTION: Split into smaller, focused functions with single responsibility
+```
+
+### Duplicate Code Detection
+**Analysis:**
+- Identical code blocks (100% match)
+- Similar code blocks (≥80% similarity)
+- Minimum 5 lines for duplicate consideration
+- Ignores test files (configurable)
+
+**Enforcement:**
+```
+Attempting to commit: src/processor.py
+VIOLATION: Duplicate code detected
+  Similarity: 95% (15 lines)
+  Locations:
+    - src/processor.py:45-60
+    - src/validator.py:78-93
+ACTION: Extract to reusable function
+```
+
 ## Exit Codes
 
 - `0` - All TDD checks passed
@@ -330,6 +468,7 @@ This skill uses:
 
 ## Best Practices
 
+### TDD Workflow
 1. Always write tests first
 2. Ensure tests fail before implementation
 3. Write minimal implementation to pass
@@ -337,9 +476,41 @@ This skill uses:
 5. Keep tests independent and focused
 6. Maintain high coverage (≥90% by default, configurable)
 7. Update tests when behavior changes
+
+### Code Quality Principles
 8. Never use recursive algorithms - use iterative solutions
 9. Always bound loops with explicit conditions and limits
 10. Avoid while(true), for(;;), and infinite loops
+11. Extract magic literals to named constants
+12. Keep functions short (<50 lines, <10 complexity)
+13. Use descriptive, self-documenting names
+14. Remove unused imports, variables, and functions
+15. Simplify complex conditionals with guard clauses
+16. Avoid code smells: god functions, feature envy, data clumps
+17. Eliminate duplicate code through extraction
+
+### Naming Conventions
+- Use camelCase for functions and variables
+- Use PascalCase for classes and types
+- Use UPPER_SNAKE_CASE for constants
+- Minimum 3 characters for names
+- Avoid abbreviations: use 'calculate' not 'calc'
+- Avoid generic names: temp, data, info, obj, var, item
+
+### Function Design
+- Single responsibility: one function, one purpose
+- Maximum 5 parameters (use objects for more)
+- Maximum 4 levels of nesting
+- Maximum cyclomatic complexity of 10
+- Maximum 50 lines of code
+- Pure functions when possible (no side effects)
+
+### Code Organization
+- Group related code into modules/packages
+- Extract duplicate code to shared functions
+- Use domain objects instead of primitives
+- Keep files focused and coherent
+- Organize imports: stdlib, third-party, local
 
 ## Iterative Over Recursive
 
@@ -435,4 +606,119 @@ The skill supports property-based testing for edge case coverage:
 def test_property_preserves_invariant(input, expected):
     result = function_under_test(input)
     assert invariant_holds(result)
+```
+
+## Configuration
+
+### Coverage Thresholds
+
+```json
+{
+  "tddEnforce": {
+    "coverageThresholds": {
+      "lines": 90,
+      "branches": 80,
+      "functions": 90,
+      "statements": 90
+    },
+    "criticalCoverage": {
+      "integrationFlow": 100,
+      "safetyConstraints": 100
+    }
+  }
+}
+```
+
+### Coding Principles Thresholds
+
+```json
+{
+  "tddEnforce": {
+    "codingPrinciples": {
+      "magicLiterals": {
+        "enabled": true,
+        "minOccurrences": 2,
+        "ignoreValues": [0, 1, -1, "", "null", "false", "true"],
+        "extractNumbers": true,
+        "extractStrings": true
+      },
+      "longFunctions": {
+        "enabled": true,
+        "maxLines": 50,
+        "maxComplexity": 10,
+        "maxParameters": 5,
+        "maxNestingDepth": 4,
+        "ignoreTestFiles": false
+      },
+      "poorNaming": {
+        "enabled": true,
+        "minNameLength": 3,
+        "forbiddenNames": ["temp", "data", "info", "obj", "var", "item"],
+        "enforceCamelCase": true,
+        "enforcePascalCase": true,
+        "enforceUpperSnakeCase": true
+      },
+      "deadCode": {
+        "enabled": true,
+        "checkUnusedImports": true,
+        "checkUnusedVariables": true,
+        "checkUnusedFunctions": true,
+        "checkUnusedClasses": true,
+        "ignoreUnderscored": true
+      },
+      "complexConditionals": {
+        "enabled": true,
+        "maxNestingDepth": 3,
+        "maxBooleanConditions": 3,
+        "suggestGuardClauses": true
+      },
+      "codeSmells": {
+        "enabled": true,
+        "detectGodFunctions": true,
+        "detectFeatureEnvy": true,
+        "detectDataClumps": true,
+        "detectPrimitiveObsession": true,
+        "godFunctionThreshold": {
+          "maxLines": 200,
+          "maxComplexity": 15
+        }
+      },
+      "duplicateCode": {
+        "enabled": true,
+        "minSimilarityScore": 0.8,
+        "minLinesForDuplicate": 5,
+        "ignoreTestFiles": true,
+        "ignoreComments": true,
+        "ignoreWhitespace": true
+      }
+    }
+  }
+}
+```
+
+### Property-Based Testing
+
+```json
+{
+  "tddEnforce": {
+    "enablePropertyBasedTesting": true,
+    "propertyTestFrameworks": ["hypothesis", "fast-check", "jsverify"],
+    "propertyTestCoverageThreshold": 80
+  }
+}
+```
+
+### Recursive and Loop Enforcement
+
+```json
+{
+  "tddEnforce": {
+    "banRecursion": true,
+    "allowTailRecursion": false,
+    "banInfiniteLoops": true,
+    "requireLoopBounds": true,
+    "maxLoopIterations": 10000,
+    "loopTimeoutMs": 5000
+  }
+}
 ```
